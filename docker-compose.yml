@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  backend:
+    container_name: backend
+    image: img-backend
+    build:
+      context: ./Backend/
+      dockerfile: Dockerfile
+    environment:
+      - OTEL_SERVICE_NAME=backend
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_TRACES_EXPORTER=fran
+      - OTEL_EXPORTER_JAEGER_ENDPOINT=http://fran:14250
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://database:5432/todolist
+    ports:
+      - "8080:8080"
+    depends_on:
+      - database
+    networks:
+      - todolist-network
+    restart: unless-stopped
+
+  database:
+    container_name: database
+    image: img-database
+    build:
+      context: ./Backend/Database/
+      dockerfile: Dockerfile
+    environment:
+      - POSTGRES_USER=fran
+      - POSTGRES_PASSWORD=hola
+      - POSTGRES_DB=todolist
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - todolist-network
+  
+  application:
+    container_name: application
+    image: application/all-in-one:latest
+    restart: always
+    ports:
+      - "14250:14250"
+      - "14268:14268"
+      - "16686:16686"
+    networks:
+      - todolist-network
+networks:
+  todolist-network:
+    name: todolist-network
+    driver: bridge
+
+volumes:
+  db-data:
+    name: volume-database
